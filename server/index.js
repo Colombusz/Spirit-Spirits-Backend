@@ -1,19 +1,15 @@
 import express from "express";
 import { connectDB } from "../config/db.js";
 import dotenv from "dotenv";
+import app from "./app.js";
 
 dotenv.config();
 const PORT = process.env.PORT || 5000;
-const app = express();
 
+connectDB();
 
-// app.use(
-//   cors({
-//     origin: "http://localhost:5173", 
-//     credentials: false, 
-//   })
-// );
-
+app.use(express.json());
+console.log(process.env.MONGO_URI);
 
 app.listen(PORT, () => {
     connectDB();
