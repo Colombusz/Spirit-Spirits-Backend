@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Liquor from "../models/liquor.js";
+import Liquor from "../models/liquorModel.js";
 import cloudinary from "../utils/cloudinaryConfig.js";
 
 // Cloudinary upload function 

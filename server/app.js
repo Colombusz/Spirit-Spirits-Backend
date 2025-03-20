@@ -3,7 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
 // Routes Imports
-import liquorRoutes from './routes/liquorRoute.js';
+import liquorRoutes from '../routes/liquorRoute.js';
 
 
 const app = express();

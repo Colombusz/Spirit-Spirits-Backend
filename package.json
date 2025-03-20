@@ -1,4 +1,9 @@
 {
+  "name": "spiritspirits",
+  "type": "module",
+  "description": "ITCP239-S\r Lacao-Lim\r Spirit&Spirits Repo !!!!",
+  "keywords": [],
+  "author": "",
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.6.0",
