@@ -1,7 +1,7 @@
 // authController.js
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
-import User from "../models/user.js";
+import User from "../models/userModel.js";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import {
   sendVerificationEmail,

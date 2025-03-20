@@ -4,6 +4,8 @@ import cors from 'cors';
 
 // Routes Imports
 import liquorRoutes from '../routes/liquorRoute.js';
+import authRoutes from '../routes/authRoute.js';
+import loginRoutes from '../routes/loginRoute.js';
 
 
 const app = express();
@@ -26,10 +28,10 @@ app.use((req, res, next) => {
     next();
 });
 
-
 // Router Connection
 app.use('/api/liquors', liquorRoutes);
-
+app.use('/api/auth', authRoutes);
+app.use('/api/login', loginRoutes);
 
 
 // Fallback for unknown routes

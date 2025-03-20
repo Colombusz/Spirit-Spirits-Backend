@@ -6,8 +6,6 @@ import app from "./app.js";
 dotenv.config();
 const PORT = process.env.PORT || 5000;
 
-connectDB();
-
 app.use(express.json());
 console.log(process.env.MONGO_URI);
 
