@@ -88,6 +88,7 @@ export const login = async (req, res) => {
       message: user.isAdmin
         ? "Logged in successfully as admin"
         : "Logged in successfully as user",
+        token,
       user: {
         ...user._doc,
         password: undefined,
@@ -141,6 +142,8 @@ export const googlelogin = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: "Logged in successfully",
+      token,
       user: {
         ...user._doc,
         password: undefined,

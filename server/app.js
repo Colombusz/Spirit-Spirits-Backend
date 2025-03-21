@@ -31,7 +31,7 @@ app.use((req, res, next) => {
 // Router Connection
 app.use('/api/liquors', liquorRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/login', loginRoutes);
+app.use('/api/auth', loginRoutes);
 
 
 // Fallback for unknown routes
