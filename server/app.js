@@ -7,8 +7,8 @@ import liquorRoutes from '../routes/liquorRoute.js';
 import authRoutes from '../routes/authRoute.js';
 import loginRoutes from '../routes/loginRoute.js';
 
-
 const app = express();
+app.use(express.json());
 
 // Middleware for parsing request bodies
 app.use(cookieParser());

@@ -100,10 +100,10 @@ export const login = async (req, res) => {
 };
 
 export const googlelogin = async (req, res) => {
-  const { idToken } = req.body;
+  const { firebaseIdToken } = req.body;
 
   try {
-    const decodedToken = await auth.verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(firebaseIdToken);
     const email = decodedToken.email;
     const firebaseUid = decodedToken.uid;
 
