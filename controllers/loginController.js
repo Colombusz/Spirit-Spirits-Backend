@@ -2,6 +2,7 @@
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import User from "../models/userModel.js";
+import jwt from "jsonwebtoken";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import {
   sendVerificationEmail,
@@ -31,18 +32,20 @@ export const signup = async (req, res) => {
       email,
       password: hashedPassword,
       verificationToken,
+      isVerified: true, // Patanggal na lang pag mag eemail verification tayo haha
       verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
     await user.save();
 
     // Generate JWT and set cookie
-    generateTokenAndSetCookie(res, user._id);
+    const token = generateTokenAndSetCookie(res, user._id);
 
-    await sendVerificationEmail(user.email, user.verificationToken);
+    // await sendVerificationEmail(user.email, user.verificationToken);
 
     res.status(201).json({
       success: true,
       message: "User created successfully",
+      token,
       user: {
         ...user._doc,
         password: undefined,
@@ -55,10 +58,9 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const user = await User.findOne({ email });
-
+    console.log("User:", user);
     if (!user) {
       return res
         .status(400)
@@ -77,9 +79,9 @@ export const login = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Email not verified" });
     }
-
+    
     // Generate JWT and set cookie
-    generateTokenAndSetCookie(res, user._id);
+    const token = generateTokenAndSetCookie(res, user._id);
 
     await user.save();
 
@@ -88,7 +90,7 @@ export const login = async (req, res) => {
       message: user.isAdmin
         ? "Logged in successfully as admin"
         : "Logged in successfully as user",
-        token,
+      token,
       user: {
         ...user._doc,
         password: undefined,
@@ -138,7 +140,10 @@ export const googlelogin = async (req, res) => {
     }
 
     // Generate JWT and set cookie
-    generateTokenAndSetCookie(res, user._id);
+    const token = generateTokenAndSetCookie(res, user._id);
+
+    // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // res.cookie('token', token, { httpOnly: true });
 
     res.status(200).json({
       success: true,
