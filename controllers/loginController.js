@@ -11,11 +11,16 @@ import {
 import { auth } from "../utils/firebase.js";
 
 export const signup = async (req, res) => {
-  const { username, firstname, lastname, email, password } = req.body;
+  // Destructure the new fields along with the existing ones
+  const { username, firstname, lastname, email, password, address, phone } = req.body;
+  
   try {
+    // Check required fields
     if (!username || !firstname || !lastname || !email || !password) {
       throw new Error("All fields are required");
     }
+
+    // Check if a user with this email already exists
     const userAlreadyExists = await User.findOne({ email });
     if (userAlreadyExists) {
       return res
@@ -23,23 +28,33 @@ export const signup = async (req, res) => {
         .json({ success: false, message: "User already exists" });
     }
 
+    // Hash the password before storing it
     const hashedPassword = await bcryptjs.hash(password, 10);
+
+    // Generate a verification token
     const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Create a new user instance with the additional fields.
+    // If address is provided as an object, it will be stored as such.
     const user = new User({
       username,
       firstname,
       lastname,
       email,
       password: hashedPassword,
+      address: address || {},  // address is expected to be an object { address, city, postalCode, country }
+      phone: phone || '',
       verificationToken,
-      isVerified: true, // Patanggal na lang pag mag eemail verification tayo haha
+      isVerified: true, // Set true if not using email verification
       verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
+
     await user.save();
 
     // Generate JWT and set cookie
     const token = generateTokenAndSetCookie(res, user._id);
 
+    // Optionally, send verification email
     // await sendVerificationEmail(user.email, user.verificationToken);
 
     res.status(201).json({
@@ -124,7 +139,7 @@ export const googlelogin = async (req, res) => {
       // Generate a secure random password
       const randomPassword = crypto.randomBytes(8).toString("hex");
 
-      // Create a new user if not found
+      // Create a new user if not found, providing default values for new fields.
       user = new User({
         username,
         firstname,
@@ -132,7 +147,7 @@ export const googlelogin = async (req, res) => {
         email,
         password: randomPassword,
         firebaseUid,
-        address: "N/A", // Default address
+        address: {}, 
         isVerified: true,
       });
 
@@ -141,9 +156,6 @@ export const googlelogin = async (req, res) => {
 
     // Generate JWT and set cookie
     const token = generateTokenAndSetCookie(res, user._id);
-
-    // const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    // res.cookie('token', token, { httpOnly: true });
 
     res.status(200).json({
       success: true,

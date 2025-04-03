@@ -23,14 +23,17 @@ const userSchema = mongoose.Schema(
       required: [true, "Please enter your email"],
       unique: true,
     },
+    // Modified address field to include detailed shipping address parameters
     address: {
-        type: String,
-        required: false,
+      street: { type: String, required: false },
+      city: { type: String, required: false },
+      postalCode: { type: String, required: false },
+      country: { type: String, required: false },
     },
     phone: {
-        type: String,
-        required: false,
-        maxLength: [11, "Your phone number cannot exceed 11 characters"],
+      type: String,
+      required: false,
+      maxLength: [11, "Your phone number cannot exceed 11 characters"],
     },
     image: {
       public_id: {
@@ -55,20 +58,13 @@ const userSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    favorites: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Liquor",
-      },
-    ],
     order: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Order",
       },
     ],
-    FCMtoken:
-    {
+    FCMtoken: {
       type: String,
       required: false,
     },

@@ -57,24 +57,23 @@ export const updateProfile = async (req, res) => {
   const image = req.file;
 
   if (!userId) {
-    return res
-      .status(400)
-      .json({ success: false, message: "User ID is required" });
+    return res.status(400).json({ success: false, message: "User ID is required" });
   }
 
   try {
     const user = await User.findById(userId);
     if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
     user.username = username || user.username;
     user.firstname = firstname || user.firstname;
     user.lastname = lastname || user.lastname;
     user.email = email || user.email;
-    user.address = address || user.address;
+    // Check if address is provided. If it's a string, parse it into an object.
+    user.address = address
+      ? (typeof address === 'string' ? JSON.parse(address) : address)
+      : user.address;
     user.phone = phone || user.phone;
 
     if (image) {
@@ -119,6 +118,7 @@ export const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 // Get All Users
 export const getUsers = async (req, res, next) => {
