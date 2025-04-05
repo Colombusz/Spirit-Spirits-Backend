@@ -72,7 +72,9 @@ export const createLiquor = async (req, res) => {
   try {
     // Destructure required fields for liquor
     const { name, price, description, brand, stock, category } = req.body;
-    const images = req.files;
+
+    console.log("Creating Liquor with data:", req);
+    console.log("Uploaded files:", req.files);
 
     // Validate required fields
     if (!name || !price || !description || !brand || !category) {
@@ -84,7 +86,7 @@ export const createLiquor = async (req, res) => {
 
     // Validate category against allowed values in the liquor model
     const validCategories = [
-      'Vodka', 'Rum', 'Tequila', 'Whiskey', 'Gin', 'Brandy', 
+      'Vodka', 'Rum', 'Tequila', 'Whiskey', 'Gin', 'Brandy',
       'Liqueur', 'Beer', 'Wine', 'Champagne', 'Sake', 'Soju', 'Baijiu', 'Whisky', 'Other'
     ];
     if (!validCategories.includes(category)) {
@@ -96,10 +98,11 @@ export const createLiquor = async (req, res) => {
 
     // Validate and upload images
     let imageLinks = [];
-    if (images && images.length > 0) {
-      for (let file of images) {
+    if (req.files) {
+      for (let file of req.files) {
         try {
-          const result = await uploadToCloudinary(file.buffer);
+          const result = await uploadToCloudinary(file.buffer); // Upload to Cloudinary
+          console.log("Cloudinary upload result:", result);
           imageLinks.push({ public_id: result.public_id, url: result.secure_url });
         } catch (error) {
           console.error("Cloudinary upload error:", error.message);
