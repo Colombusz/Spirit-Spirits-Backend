@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
-import Order from "../models/order.js";
-import Liquor from "../models/liquor.js";
-import User from "../models/user.js";
+import Order from "../models/orderModel.js";
+import Liquor from "../models/liquorModel.js";
+import User from "../models/userModel.js";
+import cloudinary from "../utils/cloudinaryConfig.js";
 
 // Get all orders
 export const getOrders = async (req, res) => {
@@ -83,3 +84,71 @@ export const updateOrder = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error" });
     }
 };
+
+export const createOrder = async (req, res) => {
+    try {
+    //   console.log("Create Order Logs", req.body);
+      if (!req.body.orderItems) {
+        return res.status(400).json({ success: false, message: "Order items not provided" });
+      }
+      
+      // Parse and transform orderItems
+      let orderItems = JSON.parse(req.body.orderItems);
+      orderItems = orderItems.map(item => ({
+        qty: item.quantity,          // Map quantity to qty
+        liquor: item.productId,        // Map productId to liquor
+        name: item.name,
+        price: item.price
+      }));
+      
+      // Parse the shipping address from a JSON string
+      const shippingAddress = JSON.parse(req.body.shippingAddress);
+      if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.postalCode || !shippingAddress.country) {
+        return res.status(400).json({ success: false, message: "Shipping address is incomplete" });
+      }
+      
+      const paymentMethod = req.body.paymentMethod;
+      const shippingPrice = Number(req.body.shippingPrice);
+      const totalPrice = Number(req.body.totalPrice);
+      
+      // Process proofOfPayment file if provided
+      let proofOfPayment = undefined;
+      if (req.file) {
+        const uploadResult = await new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "order_proofs" },
+            (error, result) => {
+              if (error) {
+                reject(new Error("Error uploading proof image to Cloudinary"));
+              } else {
+                resolve(result);
+              }
+            }
+          );
+          stream.end(req.file.buffer);
+        });
+        proofOfPayment = {
+          public_id: uploadResult.public_id,
+          url: uploadResult.secure_url,
+        };
+      }
+      
+      const userId = req.body.userId || null;
+      
+      const order = await Order.create({
+        orderItems,
+        shippingAddress,
+        paymentMethod,
+        proofOfPayment,
+        shippingPrice,
+        totalPrice,
+        user: userId,
+      });
+      
+      res.status(201).json({ success: true, data: order });
+    } catch (error) {
+      console.error("Error creating order:", error);
+      res.status(500).json({ success: false, message: "Server Error" });
+    }
+  };
+  

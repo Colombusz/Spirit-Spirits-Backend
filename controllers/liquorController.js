@@ -22,28 +22,60 @@ const uploadToCloudinary = (buffer) => {
 */
 export const getLiquors = async (req, res) => {
   try {
-    const liquors = await Liquor.aggregate([
-      {
-        $lookup: {
-          from: "reviews", // Collection name for reviews
-          localField: "_id", // Match liquor _id with liquor field in reviews
-          foreignField: "liquor", // Liquor field in reviews
-          as: "reviews"
-        }
-      },
-      {
-        $addFields: {
-          averageRating: {
-            $cond: {
-              if: { $gt: [{ $size: "$reviews" }, 0] },
-              then: { $avg: "$reviews.rating" },
-              else: 0
-            }
+    const { search, category, sort } = req.query;
+
+    // Build match object for filtering
+    const matchStage = {};
+    if (search) {
+      matchStage.name = { $regex: search, $options: 'i' };
+    }
+    if (category) {
+      matchStage.category = category;
+    }
+
+    // Determine sort stage for price
+    let sortStage = {};
+    if (sort === 'asc') {
+      sortStage.price = 1;
+    } else if (sort === 'desc') {
+      sortStage.price = -1;
+    }
+
+    const pipeline = [];
+    // Apply filtering if any filters are present
+    if (Object.keys(matchStage).length) {
+      pipeline.push({ $match: matchStage });
+    }
+    
+    // Lookup reviews if needed
+    pipeline.push({
+      $lookup: {
+        from: "reviews", // the reviews collection
+        localField: "_id",
+        foreignField: "liquor",
+        as: "reviews"
+      }
+    });
+    
+    // Add averageRating field
+    pipeline.push({
+      $addFields: {
+        averageRating: {
+          $cond: {
+            if: { $gt: [{ $size: "$reviews" }, 0] },
+            then: { $avg: "$reviews.rating" },
+            else: 0
           }
         }
       }
-      // You can add more stages if needed (e.g., lookup orders)
-    ]);
+    });
+    
+    // Apply sorting if specified
+    if (Object.keys(sortStage).length) {
+      pipeline.push({ $sort: sortStage });
+    }
+    
+    const liquors = await Liquor.aggregate(pipeline);
 
     res.status(200).json({
       success: true,
