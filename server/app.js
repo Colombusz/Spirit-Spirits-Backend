@@ -6,6 +6,7 @@ import cors from 'cors';
 import liquorRoutes from '../routes/liquorRoute.js';
 import authRoutes from '../routes/authRoute.js';
 import loginRoutes from '../routes/loginRoute.js';
+import orderRoutes from '../routes/orderRoute.js';
 
 const app = express();
 app.use(express.json());
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 app.use('/api/liquors', liquorRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', loginRoutes);
+app.use('/api/orders', orderRoutes);
 
 
 // Fallback for unknown routes
