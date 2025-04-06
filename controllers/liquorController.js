@@ -90,9 +90,13 @@ export const getLiquors = async (req, res) => {
 
 export const getLiquor = async (req, res) => {
   const { id } = req.params;
-
   try {
-    const liquor = await Liquor.findById(id);
+    // Populate the reviews field (and optionally the user field if needed)
+    const liquor = await Liquor.findById(id).populate({
+      path: 'reviews',
+      // If you want to include the reviewer's name, ensure the Review model’s user field is populated.
+      populate: { path: 'user', select: 'name' },
+    });
     res.status(200).json({ success: true, data: liquor });
   } catch (error) {
     console.error("Error in Fetching Liquor:", error.message);
