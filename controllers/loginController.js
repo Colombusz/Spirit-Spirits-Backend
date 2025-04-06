@@ -2,12 +2,7 @@
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
 import User from "../models/userModel.js";
-import jwt from "jsonwebtoken";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
-import {
-  sendVerificationEmail,
-  sendWelcomeEmail,
-} from "../utils/emails.js";
 import { auth } from "../utils/firebase.js";
 
 export const signup = async (req, res) => {
@@ -31,9 +26,6 @@ export const signup = async (req, res) => {
     // Hash the password before storing it
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    // Generate a verification token
-    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-
     // Create a new user instance with the additional fields.
     // If address is provided as an object, it will be stored as such.
     const user = new User({
@@ -44,18 +36,15 @@ export const signup = async (req, res) => {
       password: hashedPassword,
       address: address || {},  // address is expected to be an object { address, city, postalCode, country }
       phone: phone || '',
-      verificationToken,
-      isVerified: true, // Set true if not using email verification
+      isVerified: true,
       verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
     });
 
     await user.save();
 
     // Generate JWT and set cookie
-    const token = generateTokenAndSetCookie(res, user._id);
+    const token = generateTokenAndSetCookie(res, user);
 
-    // Optionally, send verification email
-    // await sendVerificationEmail(user.email, user.verificationToken);
 
     res.status(201).json({
       success: true,
@@ -96,7 +85,7 @@ export const login = async (req, res) => {
     }
     
     // Generate JWT and set cookie
-    const token = generateTokenAndSetCookie(res, user._id);
+    const token = generateTokenAndSetCookie(res, user);
 
     await user.save();
 
@@ -155,7 +144,7 @@ export const googlelogin = async (req, res) => {
     }
 
     // Generate JWT and set cookie
-    const token = generateTokenAndSetCookie(res, user._id);
+    const token = generateTokenAndSetCookie(res, user);
 
     res.status(200).json({
       success: true,
