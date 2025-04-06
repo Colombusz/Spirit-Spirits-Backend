@@ -4,10 +4,11 @@ import crypto from "crypto";
 import User from "../models/userModel.js";
 import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js";
 import { auth } from "../utils/firebase.js";
+import cloudinary from "../utils/cloudinaryConfig.js";
 
 export const signup = async (req, res) => {
   // Destructure the new fields along with the existing ones
-  const { username, firstname, lastname, email, password, address, phone } = req.body;
+  const { username, firstname, lastname, email, password, address, phone, image } = req.body;
   
   try {
     // Check required fields
@@ -26,25 +27,50 @@ export const signup = async (req, res) => {
     // Hash the password before storing it
     const hashedPassword = await bcryptjs.hash(password, 10);
 
-    // Create a new user instance with the additional fields.
-    // If address is provided as an object, it will be stored as such.
-    const user = new User({
+    // Create new user data with address and phone fields
+    const userData = {
       username,
       firstname,
       lastname,
       email,
       password: hashedPassword,
-      address: address || {},  // address is expected to be an object { address, city, postalCode, country }
+      address: address || {}, // expects an object { street, city, postalCode, country }
       phone: phone || '',
       isVerified: true,
       verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-    });
+    };
 
+    // Handle image upload:
+    if (req.file) {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "user_image" },
+          (error, result) => {
+            if (error) {
+              reject(new Error("Error uploading avatar to Cloudinary"));
+            } else {
+              resolve(result);
+            }
+          }
+        );
+        stream.end(req.file.buffer);
+      });
+      userData.image = {
+        public_id: uploadResult.public_id,
+        url: uploadResult.secure_url,
+      };
+    } else if (image && image.url) {
+      userData.image = image;
+    } else {
+      userData.image = {};
+    }
+
+    // Create a new user instance with all fields
+    const user = new User(userData);
     await user.save();
 
     // Generate JWT and set cookie
     const token = generateTokenAndSetCookie(res, user);
-
 
     res.status(201).json({
       success: true,
