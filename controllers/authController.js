@@ -136,12 +136,22 @@ export const getCurrentUser = async (req, res) => {
 // Store FCM Token
 export const storeFCM = async (req, res) => {
   const { token, id } = req.body;
+  console.log("FCM Token:", token, "User ID:", id);
+  // return;
   try {
     const user = await User.findById(id);
     if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
+    }
+
+    if(user.FCMtoken === token) {
+      return res.status(200).json({
+        success: true,
+        message: "FCM token already exists",
+        data: user.FCMtoken,
+      });
     }
     user.FCMtoken = token;
     await user.save();
