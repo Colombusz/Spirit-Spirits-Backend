@@ -2,22 +2,45 @@ import mongoose from "mongoose";
 import Order from "../models/orderModel.js";
 import Liquor from "../models/liquorModel.js";
 import User from "../models/userModel.js";
+import Review from "../models/reviewModel.js";
 import cloudinary from "../utils/cloudinaryConfig.js";
 
 // Get all orders
 export const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find({});
-        res.status(200).json({
-            success: true,
-            data: orders,
-            count: orders.length,
+      // Fetch orders as plain JS objects
+      const orders = await Order.find({}).lean();
+      
+      // Extract all order IDs from fetched orders
+      const orderIds = orders.map(order => order._id);
+      
+      // Fetch all reviews for these orders
+      const reviews = await Review.find({ order: { $in: orderIds } }).lean();
+      
+      // For each order, enrich each order item with its review (if one exists)
+      const enrichedOrders = orders.map(order => {
+        const updatedOrderItems = order.orderItems.map(item => {
+          // Look for a review where both the liquor and order match
+          const review = reviews.find(
+            r =>
+              r.liquor.toString() === item.liquor.toString() &&
+              r.order.toString() === order._id.toString()
+          );
+          return { ...item, review: review || null };
         });
+        return { ...order, orderItems: updatedOrderItems };
+      });
+      
+      res.status(200).json({
+        success: true,
+        data: enrichedOrders,
+        count: enrichedOrders.length,
+      });
     } catch (error) {
-        console.error("Error in Fetching Orders:", error.message);
-        res.status(500).json({ success: false, message: "Server Error" });
+      console.error("Error in Fetching Orders:", error.message);
+      res.status(500).json({ success: false, message: "Server Error" });
     }
-};
+  };
 
 // Update an order
 export const updateOrder = async (req, res) => {
