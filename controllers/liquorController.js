@@ -91,11 +91,10 @@ export const getLiquors = async (req, res) => {
 export const getLiquor = async (req, res) => {
   const { id } = req.params;
   try {
-    // Populate the reviews field (and optionally the user field if needed)
+    // Populate reviews, and also populate the user field in each review
     const liquor = await Liquor.findById(id).populate({
       path: 'reviews',
-      // If you want to include the reviewer's name, ensure the Review model’s user field is populated.
-      populate: { path: 'user', select: 'name' },
+      populate: { path: 'user', select: 'name username' }, // include both name and username
     });
     res.status(200).json({ success: true, data: liquor });
   } catch (error) {
@@ -103,6 +102,7 @@ export const getLiquor = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
 
 export const createLiquor = async (req, res) => {
   try {

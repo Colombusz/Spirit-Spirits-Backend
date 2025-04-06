@@ -120,7 +120,7 @@ const liquors = [
 const seedLiquors = async () => {
   try {
     // Optionally clear existing liquors
-    await Liquor.deleteMany();
+    // await Liquor.deleteMany();
     // Insert the new liquor entries
     await Liquor.insertMany(liquors);
     console.log('Successfully seeded 10 liquor entries');
