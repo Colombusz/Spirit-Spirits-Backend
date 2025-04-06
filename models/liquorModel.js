@@ -11,6 +11,10 @@ const liquorSchema = mongoose.Schema({
         maxlength: [5, "Price cannot exceed 5 characters"],
         default: 0.0,
     },
+    promoPrice: {
+        type: Number,
+        required: false,
+    },
     description: {
         type: String,
         required: [true, "Please enter the description of the liquor"],

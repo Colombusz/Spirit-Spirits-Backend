@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Liquor from "./liquor.js";
+
 
 const promoSchema = mongoose.Schema({
     name: {
@@ -10,22 +10,45 @@ const promoSchema = mongoose.Schema({
         type: Number,
         required: [true, "Please enter the discount of the promo"],
     },
-    image: {
+    images: [
+        {
+            public_id: {
+                type: String,
+                required: true
+            },
+            url: {
+                type: String,
+                required: true
+            },
+        }
+    ],
+    category: {
         type: String,
-        required: [true, "Please enter the image of the promo"],
-    },
-    liquor: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "Liquor",
+        required: [true, "Please enter the category of the liquor"],
+        enum: {
+            values: [
+            'Vodka',
+            'Rum',
+            'Tequila',
+            'Whiskey',
+            'Gin',
+            'Brandy',
+            'Liqueur',
+            'Beer',
+            'Wine',
+            'Champagne',
+            'Sake',
+            'Soju',
+            'Baijiu',
+            'Whisky',
+            'Other',
+            ],
+            message: "Please select the correct category for the liquor",
+        },
     },
     description: {
         type: String,
         required: [true, "Please enter the description of the promo"],
-    },
-    expiry: {
-        type: Date,
-        required: [true, "Please enter the expiry of the promo"],
     },
 }, {
     timestamps: true,

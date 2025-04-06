@@ -8,7 +8,7 @@ import authRoutes from '../routes/authRoute.js';
 import loginRoutes from '../routes/loginRoute.js';
 import orderRoutes from '../routes/orderRoute.js';
 import reviewRoutes from '../routes/reviewRoute.js';
-
+import promoRoutes from '../routes/promoRoutes.js';
 const app = express();
 app.use(express.json());
 
@@ -36,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/auth', loginRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/promos', promoRoutes);
 
 
 // Fallback for unknown routes

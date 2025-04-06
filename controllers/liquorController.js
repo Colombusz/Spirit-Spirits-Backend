@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import Liquor from "../models/liquorModel.js";
+import User from "../models/userModel.js";
 import cloudinary from "../utils/cloudinaryConfig.js";
-
+import { sendPushNotification } from "./NotifMessageHandler.js";
 // Cloudinary upload function 
 const uploadToCloudinary = (buffer) => {
   return new Promise((resolve, reject) => {
@@ -165,6 +166,25 @@ export const createLiquor = async (req, res) => {
     });
 
     await newLiquor.save();
+
+    
+    const Users = await User.find({isAdmin: false});
+    const tokens = Users.map(user => user.FCMtoken).filter(token => !!token);
+
+    if (tokens.length > 0) {
+      try {
+        await sendPushNotification(
+          tokens, 
+          `Check Out our new ${newLiquor.category}: ${newLiquor.name}
+          ${newLiquor.description}
+          For only ${newLiquor.price} pesos!!!
+          `, 
+          "New Liquor Alert!!!!");
+      } catch (notifError) {
+        console.error("Error sending notification to admins:", notifError.message);
+      }
+    }
+
 
     res.status(201).json({
       success: true,
