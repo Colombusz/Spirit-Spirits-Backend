@@ -177,39 +177,62 @@ export const createLiquor = async (req, res) => {
 
 export const updateLiquor = async (req, res) => {
   const { id } = req.params;
-  console.log("Liquor to update:", req.body);
+  console.log("Liquor to update:", req.body, id, req.files);
 
-  // Check for valid MongoDB ObjectId
+  // Validate MongoDB ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) return res.status(404).send(`No Liquor with id: ${id}`);
 
-  const liquor = await Liquor.findById(id);
-  const images = req.files;
-  let imageLinks = [];
+  try {
+    const liquor = await Liquor.findById(id);
+    if (!liquor) {
+      return res.status(404).send(`No liquor found with id: ${id}`);
+    }
 
-  if (images && images.length > 0) {
-    // Delete current images from Cloudinary
+    const images = req.files;  // Newly uploaded images (from `req.files`)
+    const existingImages = req.body.existingImages || [];  // Existing images (from `req.body`)
+    let imageLinks = [];  // Start with the existing images
+
+    // If there are new images uploaded, process them
+    if (images && images.length > 0) {
+      // Upload the new images to Cloudinary
+      for (let file of images) {
+        const result = await uploadToCloudinary(file.buffer);
+        imageLinks.push({ public_id: result.public_id, url: result.secure_url });
+      }
+    }
+
+    // Identify images that are no longer in the new `existingImages` array
+    
+
+
+    // Delete the images from Cloudinary that are in the current set but not in the new set
     await Promise.all(
-      liquor.images.map(async (image) => {
-        await cloudinary.uploader.destroy(image.public_id);
+      liquor.images.map(async (image) => {  // Use map instead of forEach for async/await support
+        if (!existingImages.includes(image.url)) {  // Check if the image URL is not in the existing list
+          await cloudinary.uploader.destroy(image.public_id);  // Destroy the image from Cloudinary
+        }
+        else
+        {
+          imageLinks.push({ public_id: image.public_id, url: image.url });
+        }
       })
     );
+    
 
-    // Upload new images
-    for (let file of images) {
-      const result = await uploadToCloudinary(file.buffer);
-      imageLinks.push({ public_id: result.public_id, url: result.secure_url });
-    }
-  } else {
-    imageLinks = liquor.images;
-  }
+    // Prepare updated data, including images and other fields
+    const updatedData = {
+      name: req.body.name || liquor.name,
+      price: req.body.price || liquor.price,
+      description: req.body.description || liquor.description,
+      brand: req.body.brand || liquor.brand,
+      stock: req.body.stock || liquor.stock,
+      category: req.body.category || liquor.category,
+      images: imageLinks,  // Final image list (existing + new)
+    };
 
-  const updatedData = {
-    ...req.body,
-    images: imageLinks,
-  };
-
-  try {
+    // Update the liquor document in the database
     const updatedLiquor = await Liquor.findByIdAndUpdate(id, updatedData, { new: true });
+
     res.status(200).json({ success: true, data: updatedLiquor });
   } catch (error) {
     console.error("Error Updating Liquor:", error.message);
