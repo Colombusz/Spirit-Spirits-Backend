@@ -4,7 +4,7 @@ import Liquor from "../models/liquorModel.js";
 import User from "../models/userModel.js";
 import Review from "../models/reviewModel.js";
 import cloudinary from "../utils/cloudinaryConfig.js";
-
+import {sendPushNotification} from "./NotifMessageHandler.js";
 // Get all orders
 export const getOrders = async (req, res) => {
     try {
@@ -43,70 +43,153 @@ export const getOrders = async (req, res) => {
 };
 
 // Update an order
+// Update an order
 export const updateOrder = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
+  console.log("Update Order Logs", req.body);
 
-    // Validate order id
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(404).json({ success: false, message: `No Order with id: ${id}` });
+  // Validate order id
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(404).json({ success: false, message: `No Order with id: ${id}` });
+  }
+
+  try {
+    // Update the order document with the request body data
+    const updatedOrder = await Order.findByIdAndUpdate(id, req.body, { new: true });
+    if (!updatedOrder) {
+      return res.status(404).json({ success: false, message: "Order not found" });
     }
 
-    try {
-        // Update the order document with the request body data
-        const updatedOrder = await Order.findByIdAndUpdate(id, req.body, { new: true });
-        if (!updatedOrder) {
-            return res.status(404).json({ success: false, message: "Order not found" });
-        }
-        
-        // Fetch the user who placed the order
-        const userBuyer = await User.findById(updatedOrder.user._id);
+    // Fetch the user who placed the order
+    const userBuyer = await User.findById(updatedOrder.user._id);
+    console.log("User Buyer Logs", userBuyer);
 
-        // Fetch liquor details for all liquors in the order
-        const liquorDetails = await Liquor.find({
-            _id: { $in: updatedOrder.orderItems.map(item => item.liquor) },
-        });
 
-        // Append liquor details to each order item
-        const enrichedOrderItems = updatedOrder.orderItems.map(item => {
-            const liquor = liquorDetails.find(l => l._id.equals(item.liquor));
-            return {
-                ...item.toObject(),
-                liquorDetails: liquor ? liquor.toObject() : null,
-            };
-        });
 
-        // Enrich the order with full liquor details and user's username
-        const enrichedOrder = {
-            ...updatedOrder.toObject(),
-            orderItems: enrichedOrderItems,
-            username: userBuyer.username,
-        };
 
-        // If the order status is updated to 'shipping', send an push notification
-        if (req.body.status === "shipping") {
-            try {
-                // Push notification to the user
-            } catch (notifError) {
-                console.error("Error sending notification:", notifError.message);
-            }
-        }
-        if (req.body.status === "completed") {
-            try {
-                // Push notification to the user
-            } catch (notifError) {
-                console.error("Error sending notification:", notifError.message);
-            }
-        }
 
-        // Send a push notification to the user
-        // await sendNotification(FCMToken, `Order Status: ${req.body.status}`, "");
 
-        res.status(200).json({ success: true, data: enrichedOrder });
-    } catch (error) {
-        console.error("Error Updating Order:", error.message);
-        res.status(500).json({ success: false, message: "Server Error" });
+
+    // Get admins and their FCM tokens
+    const admins = await User.find({ isAdmin: true });
+    const fcmTokens = admins.map(admin => admin.FCMtoken);
+
+
+    // Prepare the message to send to the user
+    let userMessage = getUserMessage(req.body.status, userBuyer.firstname, id);
+    let adminMessage = getAdminMessage(req.body.status, userBuyer._id, id);
+
+
+
+
+
+
+    // Send push notifications to admins if necessary
+    if (fcmTokens.length > 0) {
+      try {
+        await sendPushNotification(fcmTokens, adminMessage, "Shop Order Status Update");
+      } catch (notifError) {
+        console.error("Error sending notification to admins:", notifError.message);
+      }
     }
+
+    // Send push notification to the user
+    if (userBuyer.FCMtoken) {
+      try {
+        await sendPushNotification(userBuyer.FCMtoken, userMessage, "Order Status Update");
+      } catch (notifError) {
+        console.error("Error sending notification to user:", notifError.message);
+      }
+    } else {
+      console.warn(`User ${userBuyer} does not have an FCM token.`);
+    }
+
+
+
+
+
+
+    // Fetch liquor details for all liquors in the order
+    const liquorDetails = await Liquor.find({
+      _id: { $in: updatedOrder.orderItems.map(item => item.liquor) },
+    });
+
+    // Enrich the order items with liquor details
+    const enrichedOrderItems = updatedOrder.orderItems.map(item => {
+      const liquor = liquorDetails.find(l => l._id.equals(item.liquor));
+      return {
+        ...item.toObject(),
+        liquorDetails: liquor ? liquor.toObject() : null,
+      };
+    });
+
+    // Enrich the order with full liquor details and user's username
+    const enrichedOrder = {
+      ...updatedOrder.toObject(),
+      orderItems: enrichedOrderItems,
+      username: userBuyer.username,
+    };
+
+    res.status(200).json({ success: true, data: enrichedOrder });
+  } catch (error) {
+    console.error("Error Updating Order:", error.message);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
 };
+
+// Function to construct the user notification message
+function getUserMessage(status, firstname, orderId) {
+  switch (status) {
+    case 'Delivered':
+      return `
+        Good Day! ${firstname},
+        Your Order with the ID: ${orderId} has been successfully Delivered!!
+        Order Status: Delivered
+        We hope you enjoy your purchase! Thank you for shopping with us.
+      `;
+    case 'Cancelled':
+      return `
+        Good Day! ${firstname},
+        Your Order with the ID: ${orderId} has been Cancelled.
+        Order Status: Cancelled
+        We're sorry for the inconvenience. Please contact support if you need any assistance.
+      `;
+    case 'Processing':
+    case 'Shipped':
+      return `
+        Good Day! ${firstname},
+        Your Order with the ID: ${orderId} has been ${status}.
+        Order Status: ${status}
+      `;
+    case 'Pending':
+      return `
+        Good Day! ${firstname},
+        Your Order with the ID: ${orderId} is pending.
+        Order Status: Pending
+      `;
+    default:
+      return `Order Status: ${status}`;
+  }
+}
+
+// Function to construct the admin notification message
+function getAdminMessage(status, userId, orderId) {
+  switch (status) {
+    case 'Delivered':
+      return `
+        Good Day! Admins, User ${userId} has completed their order with ID: ${orderId}.
+      `;
+    case 'Cancelled':
+      return `
+        Good Day! Admins, User ${userId} has cancelled their order with ID: ${orderId}.
+      `;
+    case 'Pending':
+      return `
+        Good Day! Admins, User ${userId} has placed an order with ID: ${orderId}.
+      `;
+  }
+}
+
 
 export const createOrder = async (req, res) => {
     try {
